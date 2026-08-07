@@ -1,0 +1,247 @@
+name: Hermes Review Sentinel
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+env:
+  HERMES_API_KEY: ${{ secrets.HERMES_API_KEY }}
+
+jobs:
+  sentinel-analysis:
+    name: Sentinel Code Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install fastmcp semgrep pydantic pydantic-settings httpx python-dotenv
+
+      - name: Cache Semgrep Rules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/semgrep
+          key: semgrep-rules-${{ hashFiles('**/rules/*.yaml') }}
+          restore-keys: |
+            semgrep-rules-
+
+      - name: Validate Semgrep Rules
+        run: |
+          python -c "
+          from src.sentinel_server import validate_rules
+          import asyncio, json
+          result = asyncio.run(validate_rules())
+          print(result)
+          data = json.loads(result)
+          for r in data['validation_results']:
+            if not r['valid']:
+              print(f'::error file={r[\"rule_file\"]}::{r[\"output\"]}')
+              exit(1)
+          print('All rules valid')
+          "
+
+      - name: Get PR Diff
+        id: diff
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD > pr_diff.patch
+          echo "diff_path=pr_diff.patch" >> $GITHUB_OUTPUT
+          echo "lines_changed=$(grep -c '^+' pr_diff.patch || echo 0)" >> $GITHUB_OUTPUT
+
+      - name: Run Sentinel Analysis
+        id: sentinel
+        run: |
+          python -c "
+          import asyncio, json, os
+          import sys
+          sys.path.insert(0, 'src')
+          from sentinel_server import analyze_pr
+
+          with open('pr_diff.patch', 'r') as f:
+              diff = f.read()
+
+          pr_description = '''${{ github.event.pull_request.body }}'''
+
+          result = asyncio.run(analyze_pr(
+              pr_id='${{ github.event.pull_request.number }}',
+              repo_url='${{ github.repository }}',
+              diff_text=diff,
+              pr_description=pr_description,
+              ruleset_config={
+                  'max_risk_threshold': 0.35,
+                  'enforce_test_presence': True,
+                  'max_lines_changed': 400,
+                  'languages': ['python', 'typescript'],
+                  'severity_threshold': 'WARNING'
+              }
+          ))
+          
+          with open('sentinel_result.json', 'w') as f:
+              f.write(result)
+          
+          data = json.loads(result)
+          print(f'risk_score={data[\"risk_score\"]}')
+          print(f'auto_approvable={str(data[\"auto_approvable\"]).lower()}')
+          high_count = len([f for f in data[\"findings\"] if f[\"severity\"] == \"ERROR\"])
+          print(f'high_findings={high_count}')
+          print(f'total_findings={len(data[\"findings\"])}')
+          " >> $GITHUB_OUTPUT
+
+      - name: Generate Review Comment
+        id: comment
+        run: |
+          python -c "
+          import json
+          
+          with open('sentinel_result.json', 'r') as f:
+              data = json.load(f)
+          
+          if data['auto_approvable']:
+              status = 'PASS'
+              emoji = 'PASS'
+          elif any(f['severity'] == 'ERROR' for f in data['findings']):
+              status = 'FAIL'
+              emoji = 'FAIL'
+          else:
+              status = 'WARNING'
+              emoji = 'WARN'
+          
+          checks = []
+          security_findings = [f for f in data['findings'] if f.get('category') == 'security']
+          if security_findings:
+              error_count = len([f for f in security_findings if f['severity'] == 'ERROR'])
+              warn_count = len([f for f in security_findings if f['severity'] == 'WARNING'])
+              checks.append(f'Security: {error_count} errors, {warn_count} warnings')
+          
+          quality_findings = [f for f in data['findings'] if f.get('category') in ['maintainability', 'performance', 'clean-code']]
+          if quality_findings:
+              checks.append(f'Quality: {len(quality_findings)} suggestions')
+          
+          test_findings = [f for f in data['findings'] if f.get('category') == 'testing']
+          if test_findings:
+              checks.append('Test Coverage: gaps detected')
+          elif not any('test' in f.get('file', '').lower() for f in data['findings']):
+              checks.append('Test Coverage: no tests in changes')
+          
+          intent_status = 'PASS' if data['intent_match'] else 'WARN'
+          checks.append(f'Intent Alignment: {intent_status}')
+          
+          # Build markdown
+          lines = []
+          lines.append(f'## Hermes Review Sentinel {status}')
+          lines.append('')
+          lines.append(f'**Risk Score:** {data[\"risk_score\"]} | **Auto-Approvable:** {\"Yes\" if data[\"auto_approvable\"] else \"No\"}')
+          lines.append('')
+          lines.append('### Checks')
+          for check in checks:
+              lines.append(f'- {check}')
+          lines.append('')
+          
+          if data['findings']:
+              lines.append('### Top Findings')
+              for finding in data['findings'][:10]:
+                  sev = finding['severity']
+                  cat = finding['category']
+                  msg = finding['message']
+                  lines.append(f'- [{sev}] {cat}: {msg}')
+              lines.append('')
+          
+          if data['suggested_fixes']:
+              lines.append('### Suggested Fixes')
+              for fix in data['suggested_fixes'][:5]:
+                  lines.append(f'- **{fix[\"action\"]}**: {fix[\"description\"]}')
+              lines.append('')
+          
+          lines.append('---')
+          lines.append(f'*Analysis: {data[\"metadata\"][\"analysis_time_ms\"]}ms | Semgrep {data[\"metadata\"][\"semgrep_version\"]}*')
+          
+          markdown = '\\n'.join(lines)
+          
+          with open('github_comment.md', 'w') as f:
+              f.write(markdown)
+          
+          print('Comment generated')
+          "
+
+      - name: Post Review Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const comment = fs.readFileSync('github_comment.md', 'utf8');
+            
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ github.event.pull_request.number }}
+            });
+            
+            const sentinelComment = comments.find(c => 
+              c.user.type === 'Bot' && c.body.includes('Hermes Review Sentinel')
+            );
+            
+            if (sentinelComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: sentinelComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: ${{ github.event.pull_request.number }},
+                body: comment
+              });
+            }
+
+      - name: Fail on High Severity
+        if: ${{ steps.sentinel.outputs.high_findings > 0 }}
+        run: |
+          echo "::error::High severity findings detected - review required"
+          exit 1
+
+  sentinel-on-review:
+    name: Sentinel Re-analysis on Review
+    if: github.event_name == 'pull_request_review' && github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install
+        run: pip install fastmcp semgrep pydantic
+      
+      - name: Re-analyze
+        run: |
+          echo "Review approved - would re-verify no regressions"
+          # Could run full analysis again here

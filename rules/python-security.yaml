@@ -1,0 +1,366 @@
+# Python/FastAPI Security Rules — P0/P1 Only
+# High-signal rules to avoid false positive noise
+
+rules:
+  # === SECRETS & CREDENTIALS (P0) ===
+  - id: python.hardcoded-jwt-secret
+    pattern-either:
+      - pattern: JWT_SECRET = "..."
+      - pattern: JWT_SECRET_KEY = "..."
+      - pattern: SECRET_KEY = "..."
+      - pattern: jwt_secret = "..."
+      - pattern: secret_key = "..."
+    message: "Hardcoded JWT secret detected. Use environment variables."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+
+  - id: python.hardcoded-database-url
+    pattern-either:
+      - pattern: DATABASE_URL = "..."
+      - pattern: SQLALCHEMY_DATABASE_URI = "..."
+      - pattern: "postgresql"
+      - pattern: "mysql"
+      - pattern: "mongodb"
+    message: "Hardcoded database connection string. Use environment variables."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-798"
+
+  - id: python.hardcoded-api-key
+    pattern-either:
+      - pattern: API_KEY = "..."
+      - pattern: OPENAI_API_KEY = "..."
+      - pattern: ANTHROPIC_API_KEY = "..."
+      - pattern: GITHUB_TOKEN = "..."
+      - pattern: STRIPE_SECRET_KEY = "..."
+    message: "Hardcoded API key detected. Use environment variables."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-798"
+
+  - id: python.password-in-config
+    pattern-either:
+      - pattern: password = "..."
+      - pattern: pwd = "..."
+      - pattern: passwd = "..."
+    message: "Hardcoded password detected. Use secrets manager."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-259: Use of Hard-coded Password"
+
+  # === SQL INJECTION (P0) ===
+  - id: python.sql-injection-fstring
+    pattern: |
+      $X = f"...{...}..."
+      ...
+      cursor.execute($X)
+    message: "Potential SQL injection via f-string. Use parameterized queries."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A03:2021 - Injection"
+
+  - id: python.sql-injection-format
+    pattern: |
+      $X = "{}".format(...)
+      ...
+      cursor.execute($X)
+    message: "Potential SQL injection via .format(). Use parameterized queries."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-89"
+
+  - id: python.sql-injection-percent
+    pattern: |
+      $X = "..." % (...)
+      ...
+      cursor.execute($X)
+    message: "Potential SQL injection via % formatting. Use parameterized queries."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-89"
+
+  - id: python.raw-sql-execution
+    pattern: |
+      $X = "..."
+      ...
+      cursor.execute($X)
+    metavariable-regex:
+      metavariable: $X
+      regex: ".*[\\{\\%\\$].*"
+    message: "Potential SQL injection: dynamic SQL with user input. Use parameterized queries with placeholders."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-89"
+
+  # === SQL INJECTION - SQLAlchemy text() with f-string (P0) ===
+  - id: python.sql-injection-sqlalchemy-fstring
+    pattern: |
+      query = f"...{...}..."
+      ...
+      $SESSION.execute(text($X))
+    message: "SQL injection via f-string in SQLAlchemy text(). Use parameterized queries with bind parameters."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A03:2021 - Injection"
+
+  - id: python.sql-injection-sqlalchemy-text-fstring
+    pattern: |
+      $SESSION.execute(text(f"...{...}..."))
+    message: "SQL injection via f-string in SQLAlchemy text(). Use parameterized queries with bind parameters."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A03:2021 - Injection"
+
+  - id: python.sql-injection-sqlalchemy-text-format
+    pattern: |
+      $SESSION.execute(text("{}".format(...)))
+    message: "SQL injection via .format() in SQLAlchemy text(). Use parameterized queries with bind parameters."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-89"
+
+  - id: python.sql-injection-sqlalchemy-text-percent
+    pattern: |
+      $SESSION.execute(text("..." % (...)))
+    message: "SQL injection via % formatting in SQLAlchemy text(). Use parameterized queries with bind parameters."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-89"
+
+  # === N+1 QUERY DETECTION (P1) ===
+  - id: python.n-plus-one-query
+    pattern-either:
+      - pattern: |
+          for $VAR in $LIST:
+              ...
+              $REPO.get_tokens_for_user($VAR.id)
+              ...
+      - pattern: |
+          for $VAR in $LIST:
+              ...
+              $REPO.get_tokens_for_user($VAR)
+              ...
+      - pattern: |
+          for $VAR in $LIST:
+              ...
+              $REPO.get_tokens($VAR.id)
+              ...
+      - pattern: |
+          for $VAR in $LIST:
+              ...
+              $SESSION.execute(... $VAR.id ...)
+              ...
+    message: "N+1 query pattern detected: database query inside loop. Use joinedload or bulk fetch."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: performance
+      cwe: "CWE-400: Uncontrolled Resource Consumption"
+
+  # === FASTAPI SPECIFIC (P1) ===
+  - id: fastapi.missing-response-model
+    pattern: |
+      @app.$METHOD(...)
+      async def $FUNC(...):
+        ...
+    metavariable-regex:
+      metavariable: $METHOD
+      regex: "(get|post|put|delete|patch)"
+    message: "FastAPI endpoint missing response_model. Add for validation and docs."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: best-practice
+      framework: fastapi
+
+  - id: fastapi.missing-dependencies
+    pattern: |
+      @app.$METHOD(...)
+      async def $FUNC(..., $PARAM: $TYPE = Depends(...)):
+        ...
+    message: "Verify dependency injection is properly typed and scoped."
+    severity: INFO
+    languages: [python]
+    metadata:
+      category: best-practice
+      framework: fastapi
+
+  - id: fastapi.cors-wildcard
+    pattern: |
+      CORSMiddleware(
+        ...,
+        allow_origins=["*"],
+        ...
+      )
+    message: "CORS allow_origins=['*'] is insecure. Restrict to specific domains."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-942: Permissive Cross-domain Policy"
+      framework: fastapi
+
+  # === PYDANTIC / VALIDATION (P1) ===
+  - id: pydantic.missing-validation
+    pattern: |
+      class $MODEL(BaseModel):
+        $FIELD: str
+    message: "Field missing validation constraints. Add min_length, max_length, regex, etc."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: best-practice
+      framework: pydantic
+
+  - id: pydantic.arbitrary-types-allowed
+    pattern: |
+      class Config:
+        arbitrary_types_allowed = True
+    message: "arbitrary_types_allowed=True bypasses validation. Avoid unless necessary."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      framework: pydantic
+
+  # === ASYNC / AWAIT ISSUES (P1) ===
+  - id: asyncio.missing-await
+    pattern: |
+      $FUNC()
+    metavariable-regex:
+      metavariable: $FUNC
+      regex: ".*_async$|^async_.*|.*_await$"
+    message: "Async function called without await. This creates a coroutine that never runs."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: bug
+      cwe: "CWE-835: Infinite Loop"
+
+  # === CRYPTO / HASHING (P0) ===
+  - id: crypto.weak-hash-md5
+    pattern: |
+      hashlib.md5(...)
+    message: "MD5 is cryptographically broken. Use SHA-256 or SHA-3."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+
+  - id: crypto.weak-hash-sha1
+    pattern: |
+      hashlib.sha1(...)
+    message: "SHA1 is cryptographically weak. Use SHA-256 or SHA-3."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-327"
+
+  - id: crypto.insecure-random
+    pattern-either:
+      - pattern: random.random()
+      - pattern: random.randint(...)
+      - pattern: random.choice(...)
+    message: "random module is not cryptographically secure. Use secrets module for tokens/passwords."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-338: Use of Cryptographically Weak PRNG"
+
+  # === DEBUG / LOGGING ISSUES (P1) ===
+  - id: debug.print-in-production
+    pattern-either:
+      - pattern: print(...)
+      - pattern: logging.debug(...)
+    message: "Debug print/logging in production code. Use structured logging with appropriate levels."
+    severity: INFO
+    languages: [python]
+    metadata:
+      category: observability
+
+  - id: debug.pdb-breakpoint
+    pattern: |
+      breakpoint()
+    message: "breakpoint() in production code. Remove before deploying."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: bug
+
+  # === PATH TRAVERSAL (P0) ===
+  - id: path.traversal-open
+    pattern: |
+      open($PATH, ...)
+    metavariable-regex:
+      metavariable: $PATH
+      regex: ".*\\.\\..*"
+    message: "Potential path traversal via user-controlled input. Validate and sanitize paths."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-22: Path Traversal"
+
+  # === ADDITIONAL DATABASE URL PATTERNS ===
+  - id: python.hardcoded-postgres-url
+    pattern: |
+      "postgresql"
+    message: "Hardcoded PostgreSQL connection string. Use environment variables."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-798"
+
+  - id: python.hardcoded-mysql-url
+    pattern: |
+      "mysql"
+    message: "Hardcoded MySQL connection string. Use environment variables."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-798"
+
+  - id: python.hardcoded-mongodb-url
+    pattern: |
+      "mongodb"
+    message: "Hardcoded MongoDB connection string. Use environment variables."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-798"

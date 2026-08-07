@@ -1,0 +1,152 @@
+# Python Quality / Clean Code Rules — P1/P2
+# Best practices, maintainability, performance
+
+rules:
+  # === COMPLEXITY (P1) ===
+  - id: python.complex-function
+    pattern: |
+      def $FUNC(...):
+        $BODY
+    message: "Function may be too complex. Consider breaking into smaller functions."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: maintainability
+      metric: cyclomatic_complexity > 10
+
+  - id: python.long-function
+    pattern: |
+      def $FUNC(...):
+        $BODY
+    message: "Function is very long (>100 lines). Consider refactoring."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: maintainability
+
+  - id: python.too-many-arguments
+    pattern: |
+      def $FUNC($A, $B, $C, $D, $E, $F, ...):
+        $BODY
+    message: "Function has too many arguments (>5). Consider using dataclass/config object."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: maintainability
+
+  # === TYPE HINTS (P1) ===
+  - id: python.missing-type-hints
+    pattern: |
+      def $FUNC($ARG):
+        $BODY
+    message: "Function missing type hints. Add type annotations for better IDE support and bug detection."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: best-practice
+
+  - id: python.missing-return-type
+    pattern: |
+      def $FUNC(...) -> None:
+        $BODY
+    message: "Function missing return type annotation."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: best-practice
+
+  # === IMPORTS (P2) ===
+  - id: python.wildcard-import
+    pattern: |
+      from $MODULE import *
+    message: "Wildcard imports pollute namespace. Use explicit imports."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: best-practice
+
+  - id: python.unused-import
+    pattern: |
+      import $MODULE
+    message: "Potentially unused import. Remove if not used."
+    severity: INFO
+    languages: [python]
+    metadata:
+      category: clean-code
+
+  # === EXCEPTION HANDLING (P1) ===
+  - id: python.bare-except
+    pattern: |
+      except:
+        $BODY
+    message: "Bare except catches all exceptions including SystemExit/KeyboardInterrupt. Use 'except Exception:'"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: bug
+
+  - id: python.exception-swallowing
+    pattern: |
+      try:
+        $BODY1
+      except:
+        pass
+    message: "Exception caught and silently ignored. At least log the error."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: bug
+
+  # === PERFORMANCE (P1) ===
+  - id: python.inefficient-loop
+    pattern: |
+      for $X in $LIST:
+        $LIST.append($Y)
+    message: "Modifying list while iterating. Use list comprehension or separate list."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: performance
+
+  - id: python.string-concat-loop
+    pattern: |
+      $RESULT = ""
+      for $X in $LIST:
+        $RESULT += $X
+    message: "String concatenation in loop is O(n^2). Use ''.join() or list comprehension."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: performance
+
+  - id: python.list-comprehension-opportunity
+    pattern: |
+      $RESULT = []
+      for $X in $LIST:
+        $RESULT.append($EXPR)
+    message: "Can be simplified to list comprehension: [$EXPR for $X in $LIST]"
+    severity: INFO
+    languages: [python]
+    metadata:
+      category: clean-code
+
+  # === TESTING (P1) ===
+  - id: python.assert-without-message
+    pattern: |
+      assert $COND
+    message: "Assert without message makes debugging harder. Add descriptive message."
+    severity: INFO
+    languages: [python]
+    metadata:
+      category: testing
+
+  # === DOCUMENTATION (P2) ===
+  - id: python.missing-docstring
+    pattern: |
+      def $FUNC(...):
+        $BODY
+    message: "Public function missing docstring. Add for API documentation."
+    severity: INFO
+    languages: [python]
+    metadata:
+      category: documentation

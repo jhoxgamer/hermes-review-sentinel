@@ -1,0 +1,275 @@
+# TypeScript/React Quality Rules — P1/P2
+# Best practices, maintainability, performance for TS/React/Next.js
+
+rules:
+  # === COMPLEXITY (P1) ===
+  - id: typescript.complex-function
+    pattern: |
+      function $FUNC(...) {
+        $BODY
+      }
+    message: "Function may be too complex. Consider breaking into smaller functions."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: maintainability
+
+  - id: typescript.arrow-function-complex
+    pattern: |
+      const $FUNC = (...) => {
+        $BODY
+      }
+    message: "Arrow function may be too complex. Consider extracting logic."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: maintainability
+
+  - id: typescript.too-many-parameters
+    pattern: |
+      function $FUNC($A, $B, $C, $D, $E, $F, ...) {
+        $BODY
+      }
+    message: "Function has too many parameters (>5). Consider using a config object."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: maintainability
+
+  # === TYPE SAFETY (P1) ===
+  - id: typescript.any-type-usage
+    pattern: |
+      $VAR: any
+    message: "Avoid 'any' type. Use proper typing or unknown."
+    severity: WARNING
+    languages: [typescript]
+    metadata:
+      category: best-practice
+      framework: typescript
+
+  - id: typescript.ts-ignore-comment
+    pattern: |
+      // @ts-ignore
+    message: "@ts-ignore suppresses type errors. Fix the underlying type issue instead."
+    severity: WARNING
+    languages: [typescript]
+    metadata:
+      category: best-practice
+      framework: typescript
+
+  - id: typescript.non-null-assertion
+    pattern: |
+      $EXPR!
+    message: "Non-null assertion (!) bypasses type safety. Handle null/undefined properly."
+    severity: WARNING
+    languages: [typescript]
+    metadata:
+      category: best-practice
+      framework: typescript
+
+  - id: typescript.unnecessary-type-assertion
+    pattern: |
+      $EXPR as $TYPE
+    message: "Type assertion may be unnecessary. Check if inference works."
+    severity: INFO
+    languages: [typescript]
+    metadata:
+      category: best-practice
+      framework: typescript
+
+  # === CONSISTENCY (P2) ===
+  - id: typescript.consistent-naming
+    pattern: |
+      const $VAR = ...
+    message: "Use camelCase for variables, PascalCase for types, UPPER_SNAKE for constants."
+    severity: INFO
+    languages: [typescript, javascript]
+    metadata:
+      category: style
+
+  - id: typescript.promise-not-awaited
+    pattern: |
+      $PROMISE()
+    message: "Promise returned but not awaited. Add await or .catch()."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: bug
+
+  - id: typescript.unused-variable
+    pattern: |
+      const $VAR = ...
+    message: "Variable declared but never used. Remove or prefix with _."
+    severity: INFO
+    languages: [typescript, javascript]
+    metadata:
+      category: clean-code
+
+  # === TESTING (P1) ===
+  - id: typescript.test-naming
+    pattern: |
+      test("$NAME", () => { ... })
+    message: "Use descriptive test names following pattern: 'should do X when Y'."
+    severity: INFO
+    languages: [typescript, javascript]
+    metadata:
+      category: testing
+
+  - id: typescript.test-without-expect
+    pattern: |
+      test("$NAME", () => { ... })
+    message: "Test without assertions. Add expect() assertions."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: testing
+
+  - id: typescript.console-in-test
+    pattern: |
+      console.log(...)
+    message: "Remove console.log from tests. Use expect assertions instead."
+    severity: INFO
+    languages: [typescript, javascript]
+    metadata:
+      category: testing
+
+  # === REACT SPECIFIC (P1) ===
+  - id: react.missing-keys-in-map
+    pattern: |
+      $ARRAY.map($ITEM => <$COMPONENT ... />)
+    message: "Missing key prop in map iteration. Add unique key for reconciliation."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: bug
+      framework: react
+
+  - id: react.dangerous-set-state
+    pattern: |
+      set$STATE($STATE => ...)
+    message: "Verify functional state update is correct. Avoid stale closures."
+    severity: INFO
+    languages: [typescript, javascript]
+    metadata:
+      category: bug
+      framework: react
+
+  - id: react.missing-dependency-array
+    pattern: |
+      useEffect(() => {
+        ...
+      })
+    message: "useEffect missing dependency array. Add dependencies or use [] for mount-only."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: bug
+      framework: react
+
+  - id: react.missing-memo
+    pattern: |
+      export default function $COMPONENT(...) {
+        return (...)
+      }
+    message: "Consider React.memo for components rendering frequently with same props."
+    severity: INFO
+    languages: [typescript, javascript]
+    metadata:
+      category: performance
+      framework: react
+
+  - id: react.hook-rules-violation
+    pattern: |
+      if (...) {
+        useState(...)
+      }
+    message: "Hooks must be called at top level, not inside conditionals/loops."
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: bug
+      framework: react
+
+  # === PERFORMANCE (P1) ===
+  - id: typescript.ineffective-spread
+    pattern: |
+      const $NEW = { ...$OLD, $K: $V }
+    message: "Spread operator creates new object. Consider mutation if in hot path."
+    severity: INFO
+    languages: [typescript, javascript]
+    metadata:
+      category: performance
+
+  - id: react.unnecessary-rerender
+    pattern: |
+      <$COMPONENT onClick={() => $FUNC()} ... />
+    message: "Inline arrow function creates new function each render. Use useCallback or move outside."
+    severity: INFO
+    languages: [typescript, javascript]
+    metadata:
+      category: performance
+      framework: react
+
+  # === ZOD VALIDATION (P1) ===
+  - id: zod.infer-usage
+    pattern: |
+      $VAR = z.infer<typeof $SCHEMA>
+    message: "Prefer z.infer<typeof schema> for type inference from schema."
+    severity: INFO
+    languages: [typescript]
+    metadata:
+      category: best-practice
+      framework: zod
+
+  - id: zod.union-instead-of-any
+    pattern: |
+      $VAR: any
+    message: "Use Zod union/discriminated union instead of 'any' for type-safe variants."
+    severity: INFO
+    languages: [typescript]
+    metadata:
+      category: best-practice
+      framework: zod
+
+  # === ACCESSIBILITY (P1) ===
+  - id: a11y.missing-alt
+    pattern: |
+      <img src="$SRC" ... />
+    message: "Image missing alt attribute. Add descriptive alt for accessibility."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: accessibility
+      framework: react
+
+  - id: a11y.missing-label
+    pattern: |
+      <input ... />
+    message: "Input missing associated label. Add <label> or aria-label."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: accessibility
+      framework: react
+
+  - id: a11y.button-type
+    pattern: |
+      <button ...>...</button>
+    message: "Button missing type attribute. Default is 'submit' in forms. Use type='button' when not submitting."
+    severity: INFO
+    languages: [typescript, javascript]
+    metadata:
+      category: accessibility
+      framework: react
+
+  # === DOCUMENTATION (P2) ===
+  - id: typescript.missing-jsdoc
+    pattern: |
+      export function $FUNC(...) {
+        ...
+      }
+    message: "Exported function missing JSDoc. Add for API documentation."
+    severity: INFO
+    languages: [typescript]
+    metadata:
+      category: documentation

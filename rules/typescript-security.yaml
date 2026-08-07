@@ -1,0 +1,306 @@
+# TypeScript/Next.js Security Rules — P0/P1 Only
+# High-signal rules for TypeScript, React, Next.js 14+
+
+rules:
+  # === SECRETS & CREDENTIALS (P0) ===
+  - id: typescript.hardcoded-jwt-secret
+    pattern-either:
+      - pattern: JWT_SECRET = "..."
+      - pattern: JWT_SECRET_KEY = "..."
+      - pattern: SECRET_KEY = "..."
+      - pattern: const JWT_SECRET = "..."
+      - pattern: const SECRET_KEY = "..."
+      - pattern: process.env.JWT_SECRET = "..."
+    message: "Hardcoded JWT secret detected. Use environment variables."
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+
+  - id: typescript.hardcoded-api-key
+    pattern-either:
+      - pattern: API_KEY = "..."
+      - pattern: OPENAI_API_KEY = "..."
+      - pattern: ANTHROPIC_API_KEY = "..."
+      - pattern: const API_KEY = "..."
+    message: "Hardcoded API key detected. Use environment variables."
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: "CWE-798"
+
+  - id: typescript.hardcoded-db-url
+    pattern-either:
+      - pattern: DATABASE_URL = "..."
+      - pattern: POSTGRES_URL = "..."
+      - pattern: MONGODB_URI = "..."
+      - pattern: const DATABASE_URL = "..."
+    message: "Hardcoded database connection string. Use environment variables."
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: "CWE-798"
+
+  - id: typescript.hardcoded-next-public-key
+    pattern: |
+      NEXT_PUBLIC_API_KEY = "..."
+    message: "Hardcoded NEXT_PUBLIC key detected. Use environment variables."
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: "CWE-798"
+
+  # === NEXT.JS SPECIFIC (P1) ===
+  - id: nextjs.missing-metadata
+    pattern: |
+      export default function $COMPONENT(...) {
+        return (...)
+      }
+    message: "Page component missing metadata export. Add export const metadata for SEO."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: best-practice
+      framework: nextjs
+
+  - id: nextjs.missing-server-action-validation
+    pattern: |
+      export async function $ACTION(...) {
+        "use server"
+        ...
+      }
+    message: "Server Action missing input validation. Validate all inputs with Zod/schema."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      framework: nextjs
+
+  - id: nextjs.client-component-missing-boundary
+    pattern: |
+      "use client"
+      ...
+      import { useEffect } from "react"
+    message: "Client component using server-only APIs. Check for server-only imports."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: bug
+      framework: nextjs
+
+  - id: nextjs.dangerous-inner-html
+    pattern: |
+      dangerouslySetInnerHTML = { __html: $X }
+    message: "dangerouslySetInnerHTML is XSS risk. Sanitize content or use safe alternatives."
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: "CWE-79: Cross-site Scripting"
+      owasp: "A03:2021 - Injection"
+
+  - id: nextjs.missing-csp-headers
+    pattern: |
+      next.config.js
+    message: "Ensure Content Security Policy headers configured in next.config.js"
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      framework: nextjs
+
+  # === REACT / TYPESCRIPT PATTERNS (P1) ===
+  - id: react.missing-keys-in-map
+    pattern: |
+      $ARRAY.map($ITEM => <$COMPONENT ... />)
+    message: "Missing key prop in map iteration. Add unique key for reconciliation."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: bug
+      framework: react
+
+  - id: react.dangerous-set-state
+    pattern: |
+      set$STATE($STATE => ...)
+    message: "Verify functional state update is correct. Avoid stale closures."
+    severity: INFO
+    languages: [typescript, javascript]
+    metadata:
+      category: bug
+      framework: react
+
+  - id: react.missing-dependency-array
+    pattern: |
+      useEffect(() => {
+        ...
+      })
+    message: "useEffect missing dependency array. Add dependencies or use [] for mount-only."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: bug
+      framework: react
+
+  - id: typescript.any-type-usage
+    pattern: |
+      $VAR: any
+    message: "Avoid 'any' type. Use proper typing or unknown."
+    severity: WARNING
+    languages: [typescript]
+    metadata:
+      category: best-practice
+      framework: typescript
+
+  - id: typescript.ts-ignore-comment
+    pattern: |
+      // @ts-ignore
+    message: "@ts-ignore suppresses type errors. Fix the underlying type issue instead."
+    severity: WARNING
+    languages: [typescript]
+    metadata:
+      category: best-practice
+      framework: typescript
+
+  - id: typescript.non-null-assertion
+    pattern: |
+      $EXPR!
+    message: "Non-null assertion (!) bypasses type safety. Handle null/undefined properly."
+    severity: WARNING
+    languages: [typescript]
+    metadata:
+      category: best-practice
+      framework: typescript
+
+  # === SECURITY PATTERNS (P0) ===
+  - id: security.eval-usage
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: Function(...)
+      - pattern: setTimeout($STR, ...)
+    message: "eval/Function/setTimeout with string is code injection risk. Avoid dynamic code execution."
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+
+  - id: security.inner-html-assignment
+    pattern: |
+      $EL.innerHTML = $X
+    message: "Direct innerHTML assignment is XSS risk. Use textContent or sanitize."
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: "CWE-79: Cross-site Scripting"
+
+  - id: security.document-write
+    pattern: |
+      document.write(...)
+    message: "document.write is unsafe. Use DOM APIs instead."
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: "CWE-79"
+
+  - id: security.math-random-for-tokens
+    pattern: |
+      Math.random()
+    message: "Math.random() is not cryptographically secure. Use crypto.randomUUID() or crypto.getRandomValues()."
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: "CWE-338: Use of Cryptographically Weak PRNG"
+
+  # === ZOD / VALIDATION (P1) ===
+  - id: zod.missing-schema-validation
+    pattern: |
+      $FUNC($INPUT: any)
+    message: "Function accepts 'any' input without validation. Define Zod schema."
+    severity: WARNING
+    languages: [typescript]
+    metadata:
+      category: best-practice
+      framework: zod
+
+  - id: zod.unvalidated-request-body
+    pattern: |
+      const $BODY = await request.json()
+    message: "Request body parsed without validation. Validate with Zod schema before use."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      framework: nextjs
+
+  # === AUTH / AUTHORIZATION (P0) ===
+  - id: auth.missing-role-check
+    pattern: |
+      export async function $FUNC(...) {
+        "use server"
+        ...
+      }
+    message: "Admin/mutation Server Action missing role/permission check. Add authorization."
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: "CWE-862: Missing Authorization"
+      owasp: "A01:2021 - Broken Access Control"
+
+  - id: auth.missing-csrf-protection
+    pattern: |
+      export async function $FUNC(...) {
+        "use server"
+        ...
+      }
+    message: "Server Action missing CSRF protection. Next.js provides automatic protection but verify custom forms."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      framework: nextjs
+
+  # === CRYPTO (P0) ===
+  - id: crypto.weak-hash
+    pattern-either:
+      - pattern: crypto.createHash("md5")
+      - pattern: crypto.createHash("sha1")
+    message: "MD5/SHA1 are cryptographically broken. Use SHA-256 or SHA-3."
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      cwe: "CWE-327"
+
+  # === CONSOLE / DEBUG (P1) ===
+  - id: debug.console-log-production
+    pattern-either:
+      - pattern: console.log(...)
+      - pattern: console.debug(...)
+      - pattern: console.info(...)
+    message: "Console logging in production code. Use structured logger (pino, winston) with appropriate levels."
+    severity: INFO
+    languages: [typescript, javascript]
+    metadata:
+      category: observability
+
+  # === DEPENDENCY INJECTION / SERVICE LAYER (P1) ===
+  - id: di.service-in-component
+    pattern: |
+      const $SVC = new $SERVICE()
+    message: "Service instantiated in component. Use dependency injection or singleton pattern."
+    severity: WARNING
+    languages: [typescript, javascript]
+    metadata:
+      category: best-practice
+      framework: typescript
