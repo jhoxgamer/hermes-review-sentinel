@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from typing import List, Tuple, Optional
 
-from security_pair_programmer import (
+from hermes.diff_parser import (
     SecurityPairProgrammer,
     auto_fix_secrets,
     EXCLUDED_DIRS,
