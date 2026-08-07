@@ -277,7 +277,10 @@ class SecurityPairProgrammer:
                             styles = self.seen_patterns.get("env_var_style", [])
                             if styles:
                                 preferred = self._get_most_common(styles, "")
-                                if var_name != preferred:
+                                # Environment variables should be UPPER_SNAKE_CASE
+                                if preferred and not preferred.isupper():
+                                    preferred = preferred.upper()
+                                if var_name.upper() != preferred.upper():
                                     issues.append((i, "ENV_VAR_STYLE"))
 
         return issues
