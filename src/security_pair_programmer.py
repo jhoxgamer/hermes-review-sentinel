@@ -35,7 +35,7 @@ SECRET_PATTERNS = [
     # Python: GENERIC_SECRET_PY - secret_key = os.getenv("SECRET_KEY", "CHANGE_ME_IN_PRODUCTION") / secret_key = os.getenv("SECRET_KEY", "CHANGE_ME_IN_PRODUCTION")
     (re.compile(r'(?i)(?<![\'"#])(secret_key|jwt_secret|api_key|password|token)\s*=\s*["\']([^"\']{1,})["\']'), "GENERIC_SECRET_PY"),
     # JS/TS: GENERIC_SECRET_JS - const/let/var secretKey = "..."
-    (re.compile(r'(?i)(?<![\'"#])(?:const|let|var)\s+(secretKey|jwtSecret|apiKey|password|token)\s*=\s*["\']([^"\']{1,})["\']'), "GENERIC_SECRET_JS"),
+        (re.compile(r'(?i)(?<![\'"#])(?:const|let|var)\s+(secretKey|jwtSecret|apiKey|stripeKey|password|token)\s*=\s*["\']([^"\']{1,})["\']'), "GENERIC_SECRET_JS"),
     # Stripe live/test keys - usando concatenação para evitar false positives no secret scanning
     (re.compile(STRIPE_LIVE_PREFIX + r'[0-9a-zA-Z\.]{10,}'), "STRIPE_LIVE_KEY"),
     (re.compile(STRIPE_TEST_PREFIX + r'[0-9a-zA-Z\.]{10,}'), "STRIPE_TEST_KEY"),

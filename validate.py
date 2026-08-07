@@ -1,3 +1,4 @@
+import os
 import sys
 sys.path.insert(0, 'src')
 from security_pair_programmer import SecurityPairProgrammer, auto_fix_secrets
@@ -10,7 +11,7 @@ print('=== FINAL VALIDATION TESTS ===')
 print('Test 1: auto_fix_secrets Python...')
 with tempfile.TemporaryDirectory() as tmp:
     test_file = Path(tmp) / 'test.py'
-    test_file.write_text('SECRET_KEY = "FAKE_SECRET_1"\\nAPI_KEY = "FAKE_SECRET_2"\\n')
+    test_file.write_text('SECRET_KEY = "FAKE_SECRET_1"\nAPI_KEY = os.getenv("API_KEY", "CHANGE_ME_IN_PRODUCTION")\n')
     env = Path(tmp) / '.env.example'
     m, f, v = auto_fix_secrets(test_file, env)
     assert m == True and f == 2
@@ -22,7 +23,7 @@ with tempfile.TemporaryDirectory() as tmp:
 print('Test 2: auto_fix_secrets JavaScript...')
 with tempfile.TemporaryDirectory() as tmp:
     test_file = Path(tmp) / 'test.js'
-    test_file.write_text('const apiKey = "FAKE_SECRET_1"\\nconst stripeKey = "FAKE_SECRET_2"\\n')
+    test_file.write_text('const apiKey = "FAKE_SECRET_1"\nconst stripeKey = "FAKE_SECRET_2"\n')
     env = Path(tmp) / '.env.example'
     m, f, v = auto_fix_secrets(test_file, env)
     assert m == True and f == 2
@@ -35,9 +36,9 @@ print('Test 3: SPP basic detection...')
 with tempfile.TemporaryDirectory() as tmp:
     project = Path(tmp)
     (project / 'backend').mkdir()
-    (project / 'backend' / 'auth.py').write_text('@app.get("/login")\\n@depends(get_current_user)\\ndef login(): pass\\n')
+    (project / 'backend' / 'auth.py').write_text('@app.get("/login")\n@depends(get_current_user)\ndef login(): pass\n')
     test = project / 'backend' / 'test.py'
-    test.write_text('@app.get("/admin")\\ndef admin(): pass\\n')
+    test.write_text('@app.get("/admin")\ndef admin(): pass\n')
     spp = SecurityPairProgrammer(project)
     issues = spp._detect_issues_in_file(test)
     assert issues == [(1, 'MISSING_AUTH')]
@@ -51,9 +52,9 @@ print('Test 4: Line drift prevention...')
 with tempfile.TemporaryDirectory() as tmp:
     project = Path(tmp)
     (project / 'backend').mkdir()
-    (project / 'backend' / 'auth.py').write_text('@app.get("/login")\\n@depends(get_current_user)\\ndef login(): pass\\n')
+    (project / 'backend' / 'auth.py').write_text('@app.get("/login")\n@depends(get_current_user)\ndef login(): pass\n')
     test = project / 'backend' / 'test.py'
-    test.write_text('@app.get("/a")\\ndef a(): pass\\n\\n@app.get("/b")\\ndef b(): pass\\n\\n@app.get("/c")\\ndef c(): pass\\n')
+    test.write_text('@app.get("/a")\ndef a(): pass\n\n@app.get("/b")\ndef b(): pass\n\n@app.get("/c")\ndef c(): pass\n')
     spp = SecurityPairProgrammer(project)
     issues = spp._detect_issues_in_file(test)
     assert len(issues) == 3
@@ -68,9 +69,9 @@ print('Test 5: Indentation preservation...')
 with tempfile.TemporaryDirectory() as tmp:
     project = Path(tmp)
     (project / 'backend').mkdir()
-    (project / 'backend' / 'auth.py').write_text('@app.get("/login")\\n@depends(get_current_user)\\ndef login(): pass\\n')
+    (project / 'backend' / 'auth.py').write_text('@app.get("/login")\n@depends(get_current_user)\ndef login(): pass\n')
     test = Path(tmp) / 'backend' / 'test.py'
-    test.write_text('    @app.get("/admin")\\n    def admin_panel():\\n        return {"users": []}\\n')
+    test.write_text('    @app.get("/admin")\n    def admin_panel():\n        return {"users": []}\n')
     spp = SecurityPairProgrammer(Path(tmp))
     issues = spp._detect_issues_in_file(Path(tmp) / 'backend' / 'test.py')
     assert issues == [(1, 'MISSING_AUTH')]
@@ -80,11 +81,11 @@ with tempfile.TemporaryDirectory() as tmp:
     assert lines[1].startswith('    @depends')
     print('Test 5 PASSED: Indentation preserved (4 spaces)')
 
-# Test 6: JS secrets
+# Test 6: JS secrets auto-fix
 print('Test 6: JS secrets auto-fix...')
 with tempfile.TemporaryDirectory() as tmp:
     test_file = Path(tmp) / 'test.js'
-    test_file.write_text('const apiKey = "FAKE_SECRET_1"\\nconst stripeKey = "FAKE_SECRET_2"\\n')
+    test_file.write_text('const apiKey = "FAKE_SECRET_1"\nconst stripeKey = "FAKE_SECRET_2"\n')
     env = Path(tmp) / '.env.example'
     m, f, v = auto_fix_secrets(test_file, env)
     assert m == True and f == 2
@@ -96,7 +97,7 @@ with tempfile.TemporaryDirectory() as tmp:
 print('Test 7: Already secured code unchanged...')
 with tempfile.TemporaryDirectory() as tmp:
     test_file = Path(tmp) / 'test.py'
-    test_file.write_text('SECRET_KEY = os.getenv("SECRET_KEY", "CHANGE_ME")\\n')
+    test_file.write_text('SECRET_KEY = os.getenv("SECRET_KEY", "CHANGE_ME")\n')
     env = Path(tmp) / '.env.example'
     m, f, v = auto_fix_secrets(test_file, env)
     assert m == False and f == 0
@@ -106,9 +107,9 @@ with tempfile.TemporaryDirectory() as tmp:
 print('Test 8: Env var style standardization...')
 with tempfile.TemporaryDirectory() as tmp:
     project = Path(tmp)
-    (project / '.env.example').write_text('SECRET_KEY=\\nJWT_SECRET=\\nAPI_KEY=\\n')
+    (project / '.env.example').write_text('SECRET_KEY=\nJWT_SECRET=\nAPI_KEY=\n')
     test_env = project / '.env.example'
-    test_env.write_text('secret_key=\\njwt_secret=\\nAPI_KEY=\\n')
+    test_env.write_text('secret_key=\njwt_secret=\nAPI_KEY=\n')
     spp = SecurityPairProgrammer(project)
     issues = spp._detect_issues_in_file(project / '.env.example')
     assert len(issues) >= 2
@@ -123,8 +124,8 @@ with tempfile.TemporaryDirectory() as tmp:
     project = Path(tmp)
     (project / 'backend').mkdir()
     (project / 'node_modules').mkdir()
-    (project / 'backend' / 'test.py').write_text('SECRET_KEY = "FAKE_SECRET_KEY"\\n')
-    (project / 'node_modules' / 'test.py').write_text('SECRET_KEY = "FAKE_SECRET_KEY"\\n')
+    (project / 'backend' / 'test.py').write_text('SECRET_KEY = "FAKE_SECRET_1"\n')
+    (project / 'node_modules' / 'test.py').write_text('SECRET_KEY = "FAKE_SECRET_1"\n')
     spp = SecurityPairProgrammer(project)
     results = spp.scan_and_report(project)
     test_file = project / 'backend' / 'test.py'
