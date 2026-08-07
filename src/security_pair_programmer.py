@@ -271,14 +271,14 @@ class SecurityPairProgrammer:
                         issues.append((i, "MISSING_CSRF"))
 
         elif file_path.name == ".env.example":
-            for i, line in enumerate(lines, 1):
-                if "=" in line and not line.lstrip().startswith("#"):
-                    var_name = line.split("=")[0].strip()
-                    styles = self.seen_patterns.get("env_var_style", [])
-                    if styles:
-                        preferred = self._get_most_common(styles, "")
-                        if var_name != preferred and var_name.upper() != preferred.upper():
-                            issues.append((i, "ENV_VAR_STYLE"))
+                    for i, line in enumerate(lines, 1):
+                        if "=" in line and not line.lstrip().startswith("#"):
+                            var_name = line.split("=")[0].strip()
+                            styles = self.seen_patterns.get("env_var_style", [])
+                            if styles:
+                                preferred = self._get_most_common(styles, "")
+                                if var_name != preferred:
+                                    issues.append((i, "ENV_VAR_STYLE"))
 
         return issues
 
