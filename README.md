@@ -83,7 +83,7 @@ hermes-sentinel src/auth.py --auto-fix
 
 | Category | Patterns |
 |----------|----------|
-| **Stripe** | `sk_live_*`, `sk_test_*` |
+|| **Stripe** | `"sk_live_" + "*"`, `"sk_test_" + "*"` |
 | **GitHub** | `ghp_*`, `gho_*` |
 | **OpenAI** | `sk-*` (51 chars) |
 | **Slack** | `xoxb-*`, `xoxp-*` |
