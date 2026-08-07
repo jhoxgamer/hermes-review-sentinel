@@ -1,0 +1,112 @@
+# Hermes Review Sentinel Configuration
+# Copy this file to your project root as .hermes.yml to customize behavior
+
+# Project identification
+project_name: "my-project"
+
+# Exclusion patterns
+exclusions:
+  directories:
+    - "venv"
+    - ".venv"
+    - "node_modules"
+    - ".next"
+    - "__pycache__"
+    - ".git"
+    - "dist"
+    - "build"
+    - ".tox"
+    ".mypy_cache"
+    ".pytest_cache"
+    "coverage"
+    "dist"
+    "build"
+    "target"
+    ".gradle"
+  extensions:
+    - ".pyc"
+    - ".pyo"
+    - ".pyd"
+    - ".so"
+    - ".dll"
+    - ".exe"
+    - ".bin"
+    - ".dat"
+    - ".png"
+    - ".jpg"
+    - ".jpeg"
+    - ".gif"
+    - ".ico"
+    - ".svg"
+    - ".woff"
+    - ".woff2"
+    - ".ttf"
+    - ".eot"
+    - ".map"
+    - ".min.js"
+    - ".min.css"
+  patterns:
+    - "*.min.js"
+    - "*.min.css"
+    - "*.bundle.js"
+    - "*.bundle.css"
+    - "*.generated.*"
+    - "*.auto.*"
+    - "*.d.ts"
+    - "*.map"
+    - "*.lock"
+    - "*.pb.go"
+    - "*.pb.cc"
+    - "*.pb.h"
+  max_file_size: 1048576  # 1MB
+
+# Diff parsing configuration
+diff_parsing:
+  ignore_lockfiles: true
+  ignore_minified: true
+  ignore_assets: true
+  ignore_generated: true
+  max_diff_size: 50000
+  truncation_strategy: "smart"
+  context_lines: 3
+
+# Output formatting
+output:
+  format: "markdown"  # markdown, json, sarif
+  include_context: true
+  show_line_numbers: true
+  group_by_file: true
+  severity_threshold: "low"
+
+# Resilience settings
+resilience:
+  max_retries: 3
+  base_delay: 1.0
+  max_delay: 60.0
+  timeout: 30.0
+  strict_mode: false
+  rate_limit_requests: 60
+  rate_limit_window: 60
+
+# Security settings
+security:
+  severity_threshold: "low"
+  custom_rules: {}
+  excluded_rules: []
+  severity_weights:
+    critical: 1.0
+    high: 0.8
+    medium: 0.5
+    low: 0.2
+    info: 0.1
+  max_risk_score: 1.0
+
+# LLM settings
+llm_model: "gpt-4o-mini"
+llm_temperature: 0.1
+llm_max_tokens: 4096
+
+# Exit codes
+exit_code_clean: 0
+exit_code_findings: 1
+exit_code_error: 2

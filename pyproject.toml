@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hermes-review-sentinel"
 version = "2.0.31"
-description = "Security Pair Programmer (SPP) - AST-based security scanner with auto-fix and contextual learning for Python/JS/TS projects"
+description = "Security Pair Programmer (SPP) - Enterprise-grade AST-based security scanner with auto-fix and contextual learning for Python/JS/TS projects"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
@@ -29,6 +29,9 @@ dependencies = [
     "pygments>=2.17",
     "pyyaml>=6.0",
     "click>=8.1",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "tenacity>=8.2",
 ]
 
 [project.optional-dependencies]
