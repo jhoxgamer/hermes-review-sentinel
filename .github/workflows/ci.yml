@@ -27,6 +27,7 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
+          python -m ensurepip --upgrade
           pip install --upgrade pip setuptools wheel
           pip install -e .
       - name: Run validation script
