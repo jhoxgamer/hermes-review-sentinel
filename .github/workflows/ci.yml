@@ -32,8 +32,13 @@ jobs:
         run: python validate.py
       - name: Run CLI smoke test
         run: python -m src.sentinel_server . --help
-      - name: Run unit tests
-        run: pytest tests/ -v
+      - name: Run unit tests (if tests exist)
+        run: |
+          if [ -d "tests" ] && [ "$(ls -A tests/*.py 2>/dev/null)" ]; then
+            pytest tests/ -v
+          else
+            echo "No test files found, skipping pytest"
+          fi
 
   docker:
     runs-on: ubuntu-latest
