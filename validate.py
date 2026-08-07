@@ -11,7 +11,7 @@ print('=== FINAL VALIDATION TESTS ===')
 print('Test 1: auto_fix_secrets Python...')
 with tempfile.TemporaryDirectory() as tmp:
     test_file = Path(tmp) / 'test.py'
-    test_file.write_text('SECRET_KEY = "FAKE_SECRET_1"\nAPI_KEY = os.getenv("API_KEY", "CHANGE_ME_IN_PRODUCTION")\n')
+    test_file.write_text('SECRET_KEY = "FAKE_SECRET_1"\nAPI_KEY = "FAKE_SECRET_2"\n')
     env = Path(tmp) / '.env.example'
     m, f, v = auto_fix_secrets(test_file, env)
     assert m == True and f == 2
