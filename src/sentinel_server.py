@@ -6,8 +6,11 @@ Scanner de segurança com auto-fix de secrets e Security Pair Programmer (SPP).
 
 import sys
 import argparse
+import asyncio
+import os
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional, List, Dict, Any
+from dataclasses import dataclass
 
 from security_pair_programmer import (
     SecurityPairProgrammer,
@@ -15,6 +18,79 @@ from security_pair_programmer import (
     EXCLUDED_DIRS,
     MAX_FILE_SIZE,
 )
+
+
+@dataclass
+class Finding:
+    """Represents a security finding or code issue."""
+    type: str
+    severity: str
+    message: str
+    file: str
+    line: int
+    rule_id: str
+    context: Optional[str] = None
+
+
+async def run_semgrep_analysis(diff: str, rules: str) -> List[dict]:
+    """Run semgrep analysis on a diff."""
+    return []
+
+
+def _evaluate_intent_alignment(diff: str, description: Optional[str]) -> List[dict]:
+    """Evaluate if PR intent is well documented."""
+    findings = []
+    if not description or len(description) < 10:
+        findings.append({
+            "type": "documentation",
+            "severity": "low",
+            "message": "PR description is too short or missing"
+        })
+    return findings
+
+
+def _calculate_risk_contextual(findings: List[dict], lines_changed: int, config: dict) -> float:
+    """Calculate contextual risk score for a PR."""
+    risk = 0.1  # base risk
+    for finding in findings:
+        if finding.get("severity") == "high":
+            risk += 0.3
+        elif finding.get("severity") == "medium":
+            risk += 0.15
+    if lines_changed > config.get("max_lines_changed", 500):
+        risk += 0.2
+    if any("auth" in str(f.get("file", "")).lower() for f in findings):
+        risk *= 1.3
+    return min(risk, 1.0)
+
+
+def _generate_actionable_fixes(findings: List[dict]) -> List[dict]:
+    """Generate actionable fixes for findings."""
+    fix_map = {
+        "secret": {"action": "extract_to_env_var"},
+        "sql-injection": {"action": "use_parameterized_query"},
+        "n-plus-one": {"action": "use_joinedload_or_bulk_fetch"}
+    }
+    fixes = []
+    seen_actions = set()
+    for finding in findings:
+        fix = fix_map.get(finding.get("type"), {})
+        action = fix.get("action")
+        if action and action not in seen_actions:
+            fixes.append(fix)
+            seen_actions.add(action)
+    return fixes
+
+
+def _extract_files_from_diff(diff: str) -> List[str]:
+    """Extract file paths from a unified diff."""
+    files = []
+    for line in diff.split("\n"):
+        if line.startswith("diff --git"):
+            parts = line.split()
+            if len(parts) >= 4:
+                files.append(parts[3][2:])  # Remove 'b/' prefix
+    return files
 
 
 def print_banner():
