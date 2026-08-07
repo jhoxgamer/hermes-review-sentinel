@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hermes-review-sentinel"
-version = "2.0.0"
+version = "2.0.31"
 description = "Security Pair Programmer (SPP) - AST-based security scanner with auto-fix and contextual learning for Python/JS/TS projects"
 readme = "README.md"
 license = {text = "MIT"}
