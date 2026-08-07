@@ -280,7 +280,8 @@ class SecurityPairProgrammer:
                                 # Environment variables should be UPPER_SNAKE_CASE
                                 if preferred and not preferred.isupper():
                                     preferred = preferred.upper()
-                                if var_name.upper() != preferred.upper():
+                                # Flag if current var_name doesn't match the corrected preferred style
+                                if var_name != preferred:
                                     issues.append((i, "ENV_VAR_STYLE"))
 
         return issues
