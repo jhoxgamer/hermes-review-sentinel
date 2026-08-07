@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(0, 'src')
-from security_pair_programmer import SecurityPairProgrammer, auto_fix_secrets
+from hermes.diff_parser import SecurityPairProgrammer, auto_fix_secrets
 from pathlib import Path
 import tempfile
 
