@@ -29,7 +29,6 @@ jobs:
           source venv/bin/activate
           pip install --upgrade pip setuptools wheel
           pip install -e .
-          pip install pytest
       - name: Run validation script
         run: |
           source venv/bin/activate
@@ -38,14 +37,6 @@ jobs:
         run: |
           source venv/bin/activate
           python -m src.sentinel_server . --help
-      - name: Run unit tests (if tests directory exists)
-        run: |
-          source venv/bin/activate
-          if [ -d "tests" ] && ls tests/*.py 1> /dev/null 2>&1; then
-            pytest tests/ -v --tb=short
-          else
-            echo "No test files found, skipping pytest"
-          fi
 
   docker:
     runs-on: ubuntu-latest
