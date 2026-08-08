@@ -129,25 +129,19 @@ def run_scan(
                 print(f"❌ [SPP] Erro ao processar {file_p}: {e}")
                 return 2
             error_occurred = True
-        except Exception as e:
-            # Handle any unexpected errors during file processing
-            if strict:
-                print(f"❌ Erro ao processar {file_p}: {e}")
-                return 2
-            error_occurred = True
 
     # Output results
     finding_formatter = FindingFormatter(OutputConfig())
+    findings_output = ""
 
     if all_findings:
-        output_format_lower = output_format.lower()
-        findings_output = FindingFormatter.format_findings(all_findings, output_format)
+        findings_output = finding_formatter.format_findings(all_findings, output_format)
         print(findings_output)
 
     # Write to output file if specified
     if output:
-        with open(output, 'w') as f:
-            f.write(findings_output if all_findings else "")
+        with open(output, 'w', encoding='utf-8') as f:
+            f.write(findings_output)
 
     print("\n📊 [Resumo]")
     print(f"   Arquivos com issues: {files_with_issues}")
@@ -225,7 +219,7 @@ Examples:
     parser.add_argument(
         "--version",
         action="version",
-        version="Hermes Review Sentinel 2.0.0"
+        version="Hermes Review Sentinel 2.1.0"
     )
 
     args = parser.parse_args()
