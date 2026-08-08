@@ -45,7 +45,7 @@ from hermes.resilience import (
     with_retry,
 )
 
-__version__ = "2.1.0"
+__version__ = "2.1.1"
 
 __all__ = [
     # Config
@@ -90,4 +90,4 @@ __all__ = [
     "MAX_FILE_SIZE",
 ]
 
-__version__ = "2.1.0"
+__version__ = "2.1.1"

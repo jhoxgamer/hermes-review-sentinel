@@ -219,7 +219,7 @@ Examples:
     parser.add_argument(
         "--version",
         action="version",
-        version="Hermes Review Sentinel 2.1.0"
+        version="Hermes Review Sentinel 2.1.1"
     )
 
     args = parser.parse_args()
