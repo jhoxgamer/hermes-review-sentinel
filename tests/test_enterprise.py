@@ -23,10 +23,12 @@ from hermes.diff_parser import (
     DiffHunk, 
     ParsedDiff, 
     DiffType,
-    SecurityPairProgrammer,
-    auto_fix_secrets,
     EXCLUDED_DIRS,
     MAX_FILE_SIZE,
+)
+from security_pair_programmer import (
+    SecurityPairProgrammer,
+    auto_fix_secrets,
 )
 from hermes.formatters import (
     OutputFormatter, 
@@ -42,7 +44,6 @@ from hermes.resilience import (
     get_circuit_breaker,
     with_retry,
 )
-from hermes.diff_parser import SecurityPairProgrammer, auto_fix_secrets
 
 
 class TestConfig:
@@ -243,7 +244,7 @@ class TestSecurityPairProgrammer:
         test_env = tmp_path / ".env.example"
         test_env.write_text("secret_key=\njwt_secret=\nAPI_KEY=\n")
         
-        from hermes.diff_parser import SecurityPairProgrammer
+        from security_pair_programmer import SecurityPairProgrammer
         spp = SecurityPairProgrammer(Path.cwd())
         issues = spp._detect_issues_in_file(tmp_path / ".env.example")
         
@@ -534,7 +535,7 @@ class TestIntegration:
         )
         
         # Run scan
-        from hermes.diff_parser import SecurityPairProgrammer, auto_fix_secrets
+        from security_pair_programmer import SecurityPairProgrammer, auto_fix_secrets
         from hermes.formatters import OutputFormatter, FindingFormatter
         
         spp = SecurityPairProgrammer(tmp_path)
@@ -548,7 +549,7 @@ class TestIntegration:
             issues = SecurityPairProgrammer(tmp_path)._detect_issues_in_file(file_path)
             if issues:
                 # Auto-fix secrets
-                from hermes.diff_parser import auto_fix_secrets
+                from security_pair_programmer import auto_fix_secrets
                 from pathlib import Path
                 env_example = tmp_path / ".env.example"
                 auto_fix_secrets(file_path, tmp_path / ".env.example")

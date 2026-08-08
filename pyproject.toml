@@ -48,11 +48,15 @@ Repository = "https://github.com/jhoxgamer/hermes-review-sentinel"
 Issues = "https://github.com/jhoxgamer/hermes-review-sentinel/issues"
 
 [project.scripts]
-hermes-sentinel = "src.sentinel_server:main"
+hermes-sentinel = "sentinel_server:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["sentinel_server", "security_pair_programmer"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["*"]
+include = ["hermes*"]
 
 [tool.ruff]
 line-length = 100
@@ -68,6 +72,7 @@ disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
